@@ -1,6 +1,9 @@
+use std::{thread, time};
+
 /// Chipate Module
 /// Rust emulation of the Chip-8
 /// http://www.multigesturearticles/how-to-write-an-emulator-chip-8-interpreter/
+#[allow(dead_code)]
 pub struct Chipate {
     // Opcodes
     opcode: u16,
@@ -41,21 +44,48 @@ pub struct Chipate {
 impl Chipate {
     pub fn init(&mut self) {
 
-        println!("Initialize Chip");
+        debug!("Initialize Chip");
     }
 
     pub fn load_program(&mut self, program: &str) {
-        println!("Loading program {}", program);
+        debug!("Loading program {}", program);
     }
 
-    pub fn emulate_cycle() {
-        println!("Cycle Begin");
-        println!("Cycle End");
+    pub fn emulate_cycle(&mut self) {
+        debug!("Cycle Begin");
+
+        self.fetch_opcode();
+
+        let one_second = time::Duration::from_secs(1);
+        thread::sleep(one_second);
+
+        debug!("Cycle End");
+    }
+
+    pub fn draw_screen(&mut self) {
+        debug!("Drawing to Screen")
+    }
+
+    pub fn set_keys(&mut self) {
+        debug!("Saving Key State")
+    }
+
+    pub fn setup_testing_memory(&mut self) {
+        debug!("Setting test memory");
+
+        self.memory[self.pc as usize] = 0xA2;
+        self.memory[(self.pc + 1) as usize] = 0xF0;
+
+        debug!("location: 0x{:x} data: 0x{:x}", self.pc, self.memory[self.pc as usize]);
+        debug!("location: 0x{:x} data: 0x{:x}", self.pc + 1, self.memory[(self.pc + 1) as usize]);
+    }
+
+    pub fn fetch_opcode(&mut self) {
     }
 }
 
-pub fn newChipate() -> Chipate {
-    println!("Creating New Chip");
+pub fn new_chipate() -> Chipate {
+    debug!("Creating New Chip");
 
     let chip = Chipate {
         opcode: 0,
