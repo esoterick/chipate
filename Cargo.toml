@@ -1,0 +1,6 @@
+[package]
+name = "chipate"
+version = "0.1.0"
+authors = ["Robert J. Lambert III <rlambert85@gmail.com>"]
+
+[dependencies]
