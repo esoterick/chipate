@@ -10,6 +10,10 @@ pub struct Chipate {
 
     // 4K Memory
     memory: [u8; 4096],
+    // The systems memory map:
+    // 0x000-0x1FF - Chip 8 interpreter (contains font set in emu)
+    // 0x050-0x0A0 - Used for the built in 4x5 pixel font set (0-F)
+    // 0x200-0xFFF - Program ROM and work RAM
 
     // Registers
     v: [u8; 16],
@@ -19,11 +23,6 @@ pub struct Chipate {
 
     // Program Counter
     pc: u8,
-
-    // The systems memory map:
-    // 0x000-0x1FF - Chip 8 interpreter (contains font set in emu)
-    // 0x050-0x0A0 - Used for the built in 4x5 pixel font set (0-F)
-    // 0x200-0xFFF - Program ROM and work RAM
 
     gfx: [u8; 64 * 32],
 
@@ -76,11 +75,25 @@ impl Chipate {
         self.memory[self.pc as usize] = 0xA2;
         self.memory[(self.pc + 1) as usize] = 0xF0;
 
-        debug!("location: 0x{:x} data: 0x{:x}", self.pc, self.memory[self.pc as usize]);
-        debug!("location: 0x{:x} data: 0x{:x}", self.pc + 1, self.memory[(self.pc + 1) as usize]);
+        debug!("Location: 0x{:x} data: 0x{:x}",
+               self.pc,
+               self.memory[self.pc as usize]);
+        debug!("Location: 0x{:x} data: 0x{:x}",
+               self.pc + 1,
+               self.memory[(self.pc + 1) as usize]);
     }
 
     pub fn fetch_opcode(&mut self) {
+        let op_a = self.memory[self.pc as usize];
+        self.opcode = op_a as u16;
+        self.opcode = self.opcode << 8;
+        // debug!("location: 0x{:x} data: 0x{:x}", self.pc, self.opcode);
+
+        let op_b = self.memory[(self.pc + 1) as usize] as u16;
+        // debug!("location: 0x{:x} data: 0x{:x}", self.pc, op_b);
+
+        self.opcode = self.opcode | op_b;
+        debug!("Opcode: 0x{:x}", self.opcode);
     }
 }
 
@@ -99,7 +112,7 @@ pub fn new_chipate() -> Chipate {
         stack: [0; 16],
         sp: 0,
         key: [0; 16],
-        program: ""
+        program: "",
     };
 
     return chip;
