@@ -19,10 +19,10 @@ pub struct Chipate {
     v: [u8; 16],
 
     // Index
-    i: u8,
+    i: u16,
 
     // Program Counter
-    pc: u8,
+    pc: u16,
 
     gfx: [u8; 64 * 32],
 
@@ -42,8 +42,26 @@ pub struct Chipate {
 
 impl Chipate {
     pub fn init(&mut self) {
-
         debug!("Initialize Chip");
+        // pc     = 0x200;  // Program counter starts at 0x200
+        self.pc = 0x200;
+        // opcode = 0;      // Reset current opcode
+        self.opcode = 0x0;
+        // I      = 0;      // Reset index register
+        self.i = 0x0;
+        // sp     = 0;      // Reset stack pointer
+        self.sp = 0x0;
+
+        // // Clear display
+        // // Clear stack
+        // // Clear registers V0-VF
+        // // Clear memory
+
+        // // Load fontset
+        // for(int i = 0; i < 80; ++i)
+        //     memory[i] = chip8_fontset[i];
+
+        // // Reset timers
     }
 
     pub fn load_program(&mut self, program: &str) {
