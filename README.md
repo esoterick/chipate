@@ -12,8 +12,8 @@ RUST_LOG=chipate=debug cargo run
 
 ## Reference
 
-OpcodeType | C Pseudo | Explanation
-:---:|:---:|:---
+Opcode| Type | C Pseudo | Explanation
+:---:|:---:|:---:|:---
 0NNN | Call | | Calls RCA 1802 program at address NNN. Not necessary for most ROMs.
 00E0 | Display | disp_clear() | Clears the screen.
 00EE | Flow | return; | Returns from a subroutine.
