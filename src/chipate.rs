@@ -145,7 +145,9 @@ impl Chipate {
         match op {
             0xA000 => self.annn_opcode(),
             _ => {
+                // Using the catch all as a NOOP
                 debug!("Catch all: 0x{:X}", self.opcode);
+                self.increase_pc();
             }
         }
     }
