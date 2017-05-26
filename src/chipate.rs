@@ -92,7 +92,7 @@ impl Chipate {
         self.fetch_opcode();
         self.decode_opcode();
 
-        let one_second = time::Duration::from_secs(1);
+        let one_second = time::Duration::from_millis(15);
         thread::sleep(one_second);
 
         debug!("Cycle End");
@@ -138,8 +138,10 @@ impl Chipate {
         debug!("Decode: 0x{:X}", op);
 
         match op {
-            0xA000 => self._annn_opcode(),
+            0x2000 => self._2nnn_opcode(),
             0x6000 => self._6xnn_opcode(),
+            0x7000 => self._7xnn_opcode(),
+            0xA000 => self._annn_opcode(),
             _ => {
                 // Using the catch all as a NOOP
                 info!("Catch all: 0x{:X}", self.opcode);
@@ -153,6 +155,15 @@ impl Chipate {
         debug!("Program Counter: 0x{:X}", self.pc);
     }
 
+    /// 2NNN 	Flow 	*(0xNNN)() 	Calls subroutine at NNN.
+    pub fn _2nnn_opcode(&mut self) {
+        info!("2NNN: 0x{:X}", self.opcode);
+        self.stack[self.sp as usize];
+        self.sp += 1;
+        self.pc = self.opcode & 0x0FFF;
+    }
+
+    /// 6XNN 	Const 	Vx = NN 	Sets VX to NN.
     pub fn _6xnn_opcode(&mut self) {
         info!("6XNN: 0x{:X}", self.opcode);
         let mut reg = self.opcode & 0x0F00;
@@ -162,6 +173,15 @@ impl Chipate {
         self.increase_pc();
     }
 
+    /// 7XNN 	Const 	Vx += NN 	Adds NN to VX.
+    pub fn _7xnn_opcode(&mut self) {
+        info!("7XNN: 0x{:X}", self.opcode);
+        let mut reg = self.opcode & 0x0F00;
+        reg = reg >> 12;
+        self.v[reg as usize] = (self.opcode & 0x00FF) as u8 + self.v[reg as usize] as u8;
+    }
+
+    /// ANNN 	MEM 	I = NNN 	Sets I to the address NNN.
     pub fn _annn_opcode(&mut self) {
         info!("ANNN: 0x{:X}", self.opcode);
         self.i = self.opcode & 0x0FFF;
