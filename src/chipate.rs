@@ -1,4 +1,7 @@
 use std::{thread, time};
+use std::env;
+use std::io::prelude::*;
+use std::fs::File;
 
 /// Chipate Module
 /// Rust emulation of the Chip-8
@@ -66,12 +69,33 @@ impl Chipate {
 
     pub fn load_program(&mut self, program: &str) {
         debug!("Loading program {}", program);
+
+        // We assume that we are in a valid directory.
+        let mut p = env::current_dir().unwrap();
+        p.push("programs");
+        p.push(program);
+
+        debug!("The current directory is {}", p.display());
+
+        let mut f = File::open(p).expect("Unable to open file");
+
+        let mut b = Vec::new();
+
+        f.read_to_end(&mut b).expect("Unable to read file");
+
+        debug!("Length {}", b.len());
+
+        for i in 0..b.len() {
+            self.memory[i + 512] = b[i];
+        }
+
     }
 
     pub fn emulate_cycle(&mut self) {
         debug!("Cycle Begin");
 
         self.fetch_opcode();
+        self.decode_opcode();
 
         let one_second = time::Duration::from_secs(1);
         thread::sleep(one_second);
