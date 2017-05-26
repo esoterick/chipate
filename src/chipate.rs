@@ -75,15 +75,10 @@ impl Chipate {
         p.push("programs");
         p.push(program);
 
-        debug!("The current directory is {}", p.display());
-
         let mut f = File::open(p).expect("Unable to open file");
-
         let mut b = Vec::new();
 
         f.read_to_end(&mut b).expect("Unable to read file");
-
-        debug!("Length {}", b.len());
 
         for i in 0..b.len() {
             self.memory[i + 512] = b[i];
@@ -111,19 +106,19 @@ impl Chipate {
         debug!("Saving Key State")
     }
 
-    pub fn setup_testing_memory(&mut self) {
-        debug!("Setting test memory");
+    // pub fn setup_testing_memory(&mut self) {
+    //     debug!("Setting test memory");
 
-        self.memory[self.pc as usize] = 0xA2;
-        self.memory[(self.pc + 1) as usize] = 0xF0;
+    //     self.memory[self.pc as usize] = 0xA2;
+    //     self.memory[(self.pc + 1) as usize] = 0xF0;
 
-        debug!("Location: 0x{:X} data: 0x{:X}",
-               self.pc,
-               self.memory[self.pc as usize]);
-        debug!("Location: 0x{:X} data: 0x{:X}",
-               self.pc + 1,
-               self.memory[(self.pc + 1) as usize]);
-    }
+    //     debug!("Location: 0x{:X} data: 0x{:X}",
+    //            self.pc,
+    //            self.memory[self.pc as usize]);
+    //     debug!("Location: 0x{:X} data: 0x{:X}",
+    //            self.pc + 1,
+    //            self.memory[(self.pc + 1) as usize]);
+    // }
 
     pub fn fetch_opcode(&mut self) {
         let op_a = self.memory[self.pc as usize];
@@ -143,10 +138,11 @@ impl Chipate {
         debug!("Decode: 0x{:X}", op);
 
         match op {
-            0xA000 => self.annn_opcode(),
+            0xA000 => self._annn_opcode(),
+            0x6000 => self._6xnn_opcode(),
             _ => {
                 // Using the catch all as a NOOP
-                debug!("Catch all: 0x{:X}", self.opcode);
+                info!("Catch all: 0x{:X}", self.opcode);
                 self.increase_pc();
             }
         }
@@ -157,8 +153,14 @@ impl Chipate {
         debug!("Program Counter: 0x{:X}", self.pc);
     }
 
-    pub fn annn_opcode(&mut self) {
-        debug!("ANNN: 0x{:X}", self.opcode);
+    pub fn _6xnn_opcode(&mut self) {
+        info!("6XNN: 0x{:X}", self.opcode);
+        self.i = self.opcode & 0x0FFF;
+        self.increase_pc();
+    }
+
+    pub fn _annn_opcode(&mut self) {
+        info!("ANNN: 0x{:X}", self.opcode);
         self.i = self.opcode & 0x0FFF;
         self.increase_pc();
     }
