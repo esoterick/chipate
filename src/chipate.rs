@@ -119,7 +119,7 @@ impl Chipate {
         debug!("Decode: 0x{:X}", op);
 
         match op {
-            0xa000 => self.annn_opcode(),
+            0xA000 => self.annn_opcode(),
             _ => {
                 debug!("Catch all: 0x{:X}", self.opcode);
             }
