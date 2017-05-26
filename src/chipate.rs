@@ -93,10 +93,10 @@ impl Chipate {
         self.memory[self.pc as usize] = 0xA2;
         self.memory[(self.pc + 1) as usize] = 0xF0;
 
-        debug!("Location: 0x{:x} data: 0x{:x}",
+        debug!("Location: 0x{:X} data: 0x{:X}",
                self.pc,
                self.memory[self.pc as usize]);
-        debug!("Location: 0x{:x} data: 0x{:x}",
+        debug!("Location: 0x{:X} data: 0x{:X}",
                self.pc + 1,
                self.memory[(self.pc + 1) as usize]);
     }
@@ -105,33 +105,56 @@ impl Chipate {
         let op_a = self.memory[self.pc as usize];
         self.opcode = op_a as u16;
         self.opcode = self.opcode << 8;
-        // debug!("location: 0x{:x} data: 0x{:x}", self.pc, self.opcode);
+        // debug!("location: 0x{:X} data: 0x{:X}", self.pc, self.opcode);
 
         let op_b = self.memory[(self.pc + 1) as usize] as u16;
-        // debug!("location: 0x{:x} data: 0x{:x}", self.pc, op_b);
+        // debug!("location: 0x{:X} data: 0x{:X}", self.pc, op_b);
 
         self.opcode = self.opcode | op_b;
-        debug!("Opcode: 0x{:x}", self.opcode);
+        debug!("Opcode: 0x{:X}", self.opcode);
     }
-}
 
-pub fn new_chipate() -> Chipate {
-    debug!("Creating New Chip");
+    pub fn decode_opcode(&mut self) {
+        let op = self.opcode & 0xF000;
+        debug!("Decode: 0x{:X}", op);
 
-    let chip = Chipate {
-        opcode: 0,
-        memory: [0; 4096],
-        v: [0; 16],
-        i: 0,
-        pc: 0,
-        gfx: [0; 64 * 32],
-        delay_timer: 0,
-        sound_timer: 0,
-        stack: [0; 16],
-        sp: 0,
-        key: [0; 16],
-        program: "",
-    };
+        match op {
+            0xa000 => self.annn_opcode(),
+            _ => {
+                debug!("Catch all: 0x{:X}", self.opcode);
+            }
+        }
+    }
 
-    return chip;
+    pub fn increase_pc(&mut self) {
+        self.pc += 2;
+        debug!("Program Counter: 0x{:X}", self.pc);
+    }
+
+    pub fn annn_opcode(&mut self) {
+        debug!("ANNN: 0x{:X}", self.opcode);
+        self.i = self.opcode & 0x0FFF;
+        self.increase_pc();
+    }
+
+    pub fn new() -> Chipate {
+        debug!("Creating New Chip");
+
+        let chip = Chipate {
+            opcode: 0,
+            memory: [0; 4096],
+            v: [0; 16],
+            i: 0,
+            pc: 0,
+            gfx: [0; 64 * 32],
+            delay_timer: 0,
+            sound_timer: 0,
+            stack: [0; 16],
+            sp: 0,
+            key: [0; 16],
+            program: "",
+        };
+
+        return chip;
+    }
 }
