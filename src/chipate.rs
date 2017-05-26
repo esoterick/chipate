@@ -155,7 +155,10 @@ impl Chipate {
 
     pub fn _6xnn_opcode(&mut self) {
         info!("6XNN: 0x{:X}", self.opcode);
-        self.i = self.opcode & 0x0FFF;
+        let mut reg = self.opcode & 0x0F00;
+        reg = reg >> 12;
+        let data = self.opcode & 0x00FF;
+        self.v[reg as usize] = data as u8;
         self.increase_pc();
     }
 
