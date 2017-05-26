@@ -11,8 +11,8 @@ fn main() {
     chip.init();
     chip.load_program("PONG");
 
-    chip.setup_testing_memory();
-    chip.emulate_cycle();
+    // chip.setup_testing_memory();
+    // chip.emulate_cycle();
 
     loop {
         chip.emulate_cycle();
