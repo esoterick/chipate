@@ -219,6 +219,11 @@ impl Chipate {
     /// FX18 	Sound 	sound_timer(Vx) 	Sets the sound timer to VX.
     pub fn _fx18_opcode(&mut self) {
         info!("FX18: 0x{:X}", self.opcode);
+
+        let mut reg = self.opcode & 0x0F00;
+        reg = reg >> 12;
+        self.sound_timer = self.v[reg as usize];
+
         self.increase_pc();
     }
 
