@@ -208,6 +208,11 @@ impl Chipate {
     /// FX15 	Timer 	delay_timer(Vx) 	Sets the delay timer to VX.
     pub fn _fx15_opcode(&mut self) {
         info!("FX15: 0x{:X}", self.opcode);
+
+        let mut reg = self.opcode & 0x0F00;
+        reg = reg >> 12;
+        self.delay_timer = self.v[reg as usize];
+
         self.increase_pc();
     }
 
