@@ -188,6 +188,74 @@ impl Chipate {
         self.increase_pc();
     }
 
+    /// FX07 	Timer 	Vx = get_delay() 	Sets VX to the value of the delay timer.
+    pub fn _fx07_opcode(&mut self) {
+        info!("FX07: 0x{:X}", self.opcode);
+        self.increase_pc();
+    }
+
+    /// FX0A 	KeyOp 	Vx = get_key() 	A key press is awaited, and then stored in VX. (Blocking Operation. All instruction halted until next key event)
+    pub fn _fx0a_opcode(&mut self) {
+        info!("FX0A: 0x{:X}", self.opcode);
+        self.increase_pc();
+    }
+
+    /// FX15 	Timer 	delay_timer(Vx) 	Sets the delay timer to VX.
+    pub fn _fx15_opcode(&mut self) {
+        info!("FX15: 0x{:X}", self.opcode);
+        self.increase_pc();
+    }
+
+    /// FX18 	Sound 	sound_timer(Vx) 	Sets the sound timer to VX.
+    pub fn _fx18_opcode(&mut self) {
+        info!("FX18: 0x{:X}", self.opcode);
+        self.increase_pc();
+    }
+
+    /// FX1E 	MEM 	I +=Vx 	Adds VX to I.[3]
+    pub fn _fx1e_opcode(&mut self) {
+        info!("FX1E: 0x{:X}", self.opcode);
+        self.increase_pc();
+    }
+
+    /// FX29 	MEM 	I=sprite_addr[Vx] 	Sets I to the location of the sprite for the character in VX. Characters 0-F (in hexadecimal) are represented by a 4x5 font.
+    pub fn _fx29_opcode(&mut self) {
+        info!("FX29: 0x{:X}", self.opcode);
+        self.increase_pc();
+    }
+
+    /// FX33 	BCD 	....  Stores the binary-coded decimal representation of VX, with the most significant of three digits at the address in I, the middle digit at I plus 1, and the least significant digit at I plus 2. (In other words, take the decimal representation of VX, place the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2.)
+    pub fn _fx33_opcode(&mut self) {
+        info!("FX33: 0x{:X}", self.opcode);
+        self.increase_pc();
+    }
+
+    /// FX55 	MEM 	reg_dump(Vx,&I) 	Stores V0 to VX (including VX) in memory starting at address I.[4]
+    pub fn _fx55_opcode(&mut self) {
+        info!("FX55: 0x{:X}", self.opcode);
+        self.increase_pc();
+    }
+
+    /// FX65 	MEM 	reg_load(Vx,&I) 	Fills V0 to VX (including VX) with values from memory starting at address I.[4]
+    pub fn _fx65_opcode(&mut self) {
+        info!("FX65: 0x{:X}", self.opcode);
+        self.increase_pc();
+    }
+
+    pub fn _f_opcodes(&mut self) {
+        let sub_op = self.opcode & 0x00FF;
+        debug!("Decode: 0x{:X}", sub_op);
+
+        match sub_op{
+            0x0007 => self._fx07_opcode(),
+            _ => {
+                // Using the catch all as a NOOP
+                info!("Catch all 0xFxxx: 0x{:X}", self.opcode);
+                self.increase_pc();
+            }
+        }
+    }
+
     pub fn new() -> Chipate {
         debug!("Creating New Chip");
 
