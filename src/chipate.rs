@@ -191,6 +191,11 @@ impl Chipate {
     /// FX07 	Timer 	Vx = get_delay() 	Sets VX to the value of the delay timer.
     pub fn _fx07_opcode(&mut self) {
         info!("FX07: 0x{:X}", self.opcode);
+
+        let mut reg = self.opcode & 0x0F00;
+        reg = reg >> 12;
+        self.v[reg as usize] = self.delay_timer;
+
         self.increase_pc();
     }
 
