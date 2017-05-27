@@ -92,7 +92,7 @@ impl Chipate {
         self.fetch_opcode();
         self.decode_opcode();
 
-        let one_second = time::Duration::from_millis(15);
+        let one_second = time::Duration::from_millis(1000);
         thread::sleep(one_second);
 
         debug!("Cycle End");
@@ -142,6 +142,7 @@ impl Chipate {
             0x6000 => self._6xnn_opcode(),
             0x7000 => self._7xnn_opcode(),
             0xA000 => self._annn_opcode(),
+            0xF000 => self._f_opcodes(),
             _ => {
                 // Using the catch all as a NOOP
                 info!("Catch all: 0x{:X}", self.opcode);
@@ -161,6 +162,7 @@ impl Chipate {
         self.stack[self.sp as usize];
         self.sp += 1;
         self.pc = self.opcode & 0x0FFF;
+        self.increase_pc();
     }
 
     /// 6XNN 	Const 	Vx = NN 	Sets VX to NN.
@@ -179,6 +181,7 @@ impl Chipate {
         let mut reg = self.opcode & 0x0F00;
         reg = reg >> 12;
         self.v[reg as usize] = (self.opcode & 0x00FF) as u8 + self.v[reg as usize] as u8;
+        self.increase_pc();
     }
 
     /// ANNN 	MEM 	I = NNN 	Sets I to the address NNN.
@@ -242,6 +245,12 @@ impl Chipate {
     /// FX33 	BCD 	....  Stores the binary-coded decimal representation of VX, with the most significant of three digits at the address in I, the middle digit at I plus 1, and the least significant digit at I plus 2. (In other words, take the decimal representation of VX, place the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2.)
     pub fn _fx33_opcode(&mut self) {
         info!("FX33: 0x{:X}", self.opcode);
+
+        let mut reg = self.opcode & 0x0F00;
+        reg = reg >> 12;
+        let v = self.v[reg as usize];
+
+        debug!("FX33: {}", v);
         self.increase_pc();
     }
 
@@ -263,6 +272,14 @@ impl Chipate {
 
         match sub_op{
             0x0007 => self._fx07_opcode(),
+            0x000a => self._fx0a_opcode(),
+            0x0015 => self._fx15_opcode(),
+            0x0018 => self._fx18_opcode(),
+            0x001e => self._fx1e_opcode(),
+            0x0029 => self._fx29_opcode(),
+            0x0033 => self._fx33_opcode(),
+            0x0055 => self._fx55_opcode(),
+            0x0065 => self._fx65_opcode(),
             _ => {
                 // Using the catch all as a NOOP
                 info!("Catch all 0xFxxx: 0x{:X}", self.opcode);
