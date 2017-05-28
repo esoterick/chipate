@@ -137,6 +137,7 @@ impl Chipate {
             0x6000 => self._6xnn_opcode(),
             0x7000 => self._7xnn_opcode(),
             0xA000 => self._annn_opcode(),
+            0xE000 => self._e_opcodes(),
             0xF000 => self._f_opcodes(),
             _ => {
                 // Using the catch all as a NOOP
@@ -180,6 +181,14 @@ impl Chipate {
         self.increase_pc();
     }
 
+    /// 1NNN 	Flow 	goto NNN; 	Jumps to address NNN.
+    pub fn _1nnn_opcode(&mut self) {
+        info!("1NNN: 0x{:X}", self.opcode);
+        let addr = self.opcode & 0x0FFF;
+        self.pc = addr;
+        debug!("Jumping to 0x{:X}", addr);
+    }
+
     /// 2NNN 	Flow 	*(0xNNN)() 	Calls subroutine at NNN.
     pub fn _2nnn_opcode(&mut self) {
         info!("2NNN: 0x{:X}", self.opcode);
@@ -208,10 +217,12 @@ impl Chipate {
     /// 7XNN 	Const 	Vx += NN 	Adds NN to VX.
     pub fn _7xnn_opcode(&mut self) {
         info!("7XNN: 0x{:X}", self.opcode);
+
         let mut reg = self.opcode & 0x0F00;
         reg = reg >> 8;
 
         let nn = (self.opcode & 0x00FF) as u8;
+        info!("0x{:X}", self.opcode);
 
         self.v[reg as usize] += nn;
         self.increase_pc();
@@ -309,11 +320,37 @@ impl Chipate {
         debug!("Set I: {:X}", self.i);
     }
 
+
+    pub fn _e_opcodes(&mut self) {
+        let sub_op = self.opcode & 0x00FF;
+        debug!("Decode: 0x{:X}", sub_op);
+
+        match sub_op{
+            0x009E => self._ex9e_opcode(),
+            0x00A1 => self._exa1_opcode(),
+            _ => {
+                // Using the catch all as a NOOP
+                info!("Catch all 0xENNN: 0x{:X}", self.opcode);
+                self.increase_pc();
+            }
+        }
+    }
+
     /// EX9E 	KeyOp 	if(key()==Vx) 	Skips the next instruction if the key stored in VX is pressed.
     /// (Usually the next instruction is a jump to skip a code block)
+    pub fn _ex9e_opcode(&mut self) {
+        info!("EX9E: 0x{:X}", self.opcode);
+        debug!("TODO: check for key");
+    }
 
     /// EXA1 	KeyOp 	if(key()!=Vx) 	Skips the next instruction if the key stored in VX isn't pressed.
     /// (Usually the next instruction is a jump to skip a code block)
+    pub fn _exa1_opcode(&mut self) {
+        info!("EXA1: 0x{:X}", self.opcode);
+        debug!("TODO: check for key");
+        self.increase_pc();
+        self.increase_pc();
+    }
 
     /// FX07 	Timer 	Vx = get_delay() 	Sets VX to the value of the delay timer.
     pub fn _fx07_opcode(&mut self) {
