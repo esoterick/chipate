@@ -351,17 +351,11 @@ impl Chipate {
         info !("FX33: 0x{:X}", self.opcode);
 
         let mut reg = self.opcode & 0x0F00;
-
         reg = reg >> 8;
-        let v = self.v[reg as usize] as u16;
 
-        info!("FX33 reg: {:X} {}", reg, reg);
-        info!("FX33 v: {}", v);
-
-        let b = bcd(&v);
-        info!("I0: {}", b[0]);
-        info!("I1: {}", b[1]);
-        info!("I2: {}", b[2]);
+        self.memory[self.i as usize] = (self.v[reg as usize] / 100);
+        self.memory[(self.i + 1) as usize] = ((self.v[reg as usize] / 10) % 10);
+        self.memory[(self.i + 1) as usize] = ((self.v[reg as usize] % 100) % 10);
 
         self.increase_pc();
     }
