@@ -34,8 +34,8 @@ pub struct Chipate {
     sound_timer: u8,
 
     // Stack
-    stack: [u8; 16],
-    sp: u8,
+    stack: Vec<u16>,
+    // sp: u8,
 
     // Keypad
     key: [u8; 16],
@@ -53,7 +53,7 @@ impl Chipate {
         // I      = 0;      // Reset index register
         self.i = 0x0;
         // sp     = 0;      // Reset stack pointer
-        self.sp = 0x0;
+        // self.sp = 0x0;
 
         // // Clear display
         // // Clear stack
@@ -132,6 +132,7 @@ impl Chipate {
         let op = self.opcode & 0xF000;
 
         match op {
+            0x0000 => self._0_opcodes(),
             0x2000 => self._2nnn_opcode(),
             0x6000 => self._6xnn_opcode(),
             0x7000 => self._7xnn_opcode(),
@@ -150,11 +151,41 @@ impl Chipate {
         debug!("Program Counter: 0x{:X}", self.pc);
     }
 
+    pub fn _0_opcodes(&mut self) {
+        let sub_op = self.opcode & 0x00FF;
+
+        match sub_op{
+            0x00E0 => self._00e0_opcode(),
+            0x00EE => self._00ee_opcode(),
+            _ => {
+                /// 0NNN 	Call 		Calls RCA 1802 program at address NNN. Not necessary for most ROMs.
+                info!("Calls RCA 1802 program at address NNN. 0x{:X}", self.opcode);
+                self.increase_pc();
+            }
+        }
+    }
+
+    /// 00E0 	Display 	disp_clear() 	Clears the screen.
+    pub fn _00e0_opcode(&mut self) {
+        info!("TODO: Clear Display");
+        self.increase_pc();
+    }
+
+    /// 00EE 	Flow 	return; 	Returns from a subroutine.
+    pub fn _00ee_opcode(&mut self) {
+        info!("Return from sub routine");
+        let addr = self.stack.pop();
+        self.pc = addr.unwrap() as u16;
+        debug!("Returning to {:X}", addr.unwrap());
+        self.increase_pc();
+    }
+
     /// 2NNN 	Flow 	*(0xNNN)() 	Calls subroutine at NNN.
     pub fn _2nnn_opcode(&mut self) {
         info!("2NNN: 0x{:X}", self.opcode);
-        self.stack[self.sp as usize];
-        self.sp += 1;
+        self.stack.push(self.pc);
+        debug!("Pushing Callback to Stack: 0x{:X}", self.pc);
+        // self.sp += 1;
         self.pc = self.opcode & 0x0FFF;
         debug!("Calls subroutine at: 0x{:X}", (self.opcode & 0x0FFF));
         // TODO: Jumping doesn't need to increase the PC again right?
@@ -278,12 +309,18 @@ impl Chipate {
         debug!("Set I: {:X}", self.i);
     }
 
+    /// EX9E 	KeyOp 	if(key()==Vx) 	Skips the next instruction if the key stored in VX is pressed.
+    /// (Usually the next instruction is a jump to skip a code block)
+
+    /// EXA1 	KeyOp 	if(key()!=Vx) 	Skips the next instruction if the key stored in VX isn't pressed.
+    /// (Usually the next instruction is a jump to skip a code block)
+
     /// FX07 	Timer 	Vx = get_delay() 	Sets VX to the value of the delay timer.
     pub fn _fx07_opcode(&mut self) {
         info!("FX07: 0x{:X}", self.opcode);
 
         let mut reg = self.opcode & 0x0F00;
-        reg = reg >> 12;
+        reg = reg >> 8;
         self.v[reg as usize] = self.delay_timer;
 
         self.increase_pc();
@@ -353,9 +390,12 @@ impl Chipate {
         let mut reg = self.opcode & 0x0F00;
         reg = reg >> 8;
 
-        self.memory[self.i as usize] = (self.v[reg as usize] / 100);
-        self.memory[(self.i + 1) as usize] = ((self.v[reg as usize] / 10) % 10);
-        self.memory[(self.i + 1) as usize] = ((self.v[reg as usize] % 100) % 10);
+        self.memory[self.i as usize] = self.v[reg as usize] / 100;
+        debug!("BCD: {}", self.memory[self.i as usize]);
+        self.memory[(self.i + 1) as usize] = self.v[reg as usize] / 10 % 10;
+        debug!("BCD: {}", self.memory[(self.i + 1) as usize]);
+        self.memory[(self.i + 2) as usize] = self.v[reg as usize] / 10 % 10;
+        debug!("BCD: {}", self.memory[(self.i + 2) as usize]);
 
         self.increase_pc();
     }
@@ -407,8 +447,8 @@ impl Chipate {
             gfx: [0; 64 * 32],
             delay_timer: 0,
             sound_timer: 0,
-            stack: [0; 16],
-            sp: 0,
+            stack: Vec::new(),
+            // sp: 0,
             key: [0; 16],
             program: "",
         };
@@ -417,16 +457,16 @@ impl Chipate {
     }
 }
 
-pub fn bcd(n: &u16) -> Vec<u16> {
-    let s = &format!("{}", n);
-    let mut v: Vec<u16> = vec![0u16,0u16,0u16];
-    info!("{}",s);
+// pub fn bcd(n: &u16) -> Vec<u16> {
+//     let s = &format!("{}", n);
+//     let mut v: Vec<u16> = vec![0u16,0u16,0u16];
+//     info!("{}",s);
 
-    for b in s.as_bytes().iter() {
-        v.push(*b as u16);
-    }
-    v.reverse();
-    info!("v {:?}",v);
-    let dif = v.len() - 3;
-    v
-}
+//     for b in s.as_bytes().iter() {
+//         v.push(*b as u16);
+//     }
+//     v.reverse();
+//     info!("v {:?}",v);
+//     let dif = v.len() - 3;
+//     v
+// }
