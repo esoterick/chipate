@@ -197,8 +197,6 @@ impl Chipate {
         // self.sp += 1;
         self.pc = self.opcode & 0x0FFF;
         debug!("Calls subroutine at: 0x{:X}", (self.opcode & 0x0FFF));
-        // TODO: Jumping doesn't need to increase the PC again right?
-        // self.increase_pc();
     }
 
     /// 6XNN 	Const 	Vx = NN 	Sets VX to NN.
@@ -232,6 +230,11 @@ impl Chipate {
     /// 8XY0	Assign	Vx=Vy	Sets VX to the value of VY.
     pub fn _8xy0_opcode(&mut self) {
         info!("8XY0: 0x{:X}", self.opcode);
+        let x = (self.opcode & 0x0F00) >> 8;
+        let y = (self.opcode & 0x00F0) >> 4;
+
+        self.v[x as usize] = self.v[y as usize];
+
         self.increase_pc();
         debug!("Assign	Vx=Vy	Sets VX to the value of VY");
     }
@@ -239,6 +242,12 @@ impl Chipate {
     /// 8XY1	BitOp	Vx=Vx|Vy	Sets VX to VX or VY. (Bitwise OR operation)
     pub fn _8xy1_opcode(&mut self) {
         info!("8XY1: 0x{:X}", self.opcode);
+
+        let x = (self.opcode & 0x0F00) >> 8;
+        let y = (self.opcode & 0x00F0) >> 4;
+
+        self.v[x as usize] |= self.v[y as usize];
+
         self.increase_pc();
         debug!("BitOp	Vx=Vx|Vy	Sets VX to VX or VY. (Bitwise OR operation)");
     }
@@ -246,18 +255,49 @@ impl Chipate {
     /// 8XY2	BitOp	Vx=Vx&Vy	Sets VX to VX and VY. (Bitwise AND operation)
     pub fn _8xy2_opcode(&mut self) {
         info!("8XY2: 0x{:X}", self.opcode);
+
+        let x = (self.opcode & 0x0F00) >> 8;
+        let y = (self.opcode & 0x00F0) >> 4;
+
+        self.v[x as usize] &= self.v[y as usize];
+
         self.increase_pc();
+        debug!("8XY2	BitOp	Vx=Vx&Vy	Sets VX to VX and VY. (Bitwise AND operation)");
     }
 
     /// 8XY3	BitOp	Vx=Vx^Vy	Sets VX to VX xor VY.
     pub fn _8xy3_opcode(&mut self) {
         info!("8XY3: 0x{:X}", self.opcode);
+
+        let x = (self.opcode & 0x0F00) >> 8;
+        let y = (self.opcode & 0x00F0) >> 4;
+
+        self.v[x as usize] ^= self.v[y as usize];
+
         self.increase_pc();
+        debug!("8XY3	BitOp	Vx=Vx^Vy	Sets VX to VX xor VY.");
     }
 
     /// 8XY4	Math	Vx += Vy	Adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there isn't.
     pub fn _8xy4_opcode(&mut self) {
         info!("8XY4: 0x{:X}", self.opcode);
+
+        let mut buf: u32;
+
+        // TODO: Working
+        let x = (self.opcode & 0x0F00) >> 8;
+        let y = (self.opcode & 0x00F0) >> 4;
+
+        if self.v[x as usize] > 0xFF - self.v[y as usize] {
+            self.v[0xF as usize] = 1;
+        } else {
+            self.v[0xF as usize] = 0;
+        }
+
+        // Easy way to add our buffers without overflow
+        buf = self.v[x as usize] as u32 + self.v[y as usize] as u32;
+        self.v[x as usize] = buf as u8;
+
         self.increase_pc();
     }
 
