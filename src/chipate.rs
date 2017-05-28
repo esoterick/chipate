@@ -87,23 +87,19 @@ impl Chipate {
     }
 
     pub fn emulate_cycle(&mut self) {
-        debug!("Cycle Begin");
-
         self.fetch_opcode();
         self.decode_opcode();
 
         let one_second = time::Duration::from_millis(15);
         thread::sleep(one_second);
-
-        debug!("Cycle End");
     }
 
     pub fn draw_screen(&mut self) {
-        debug!("Drawing to Screen")
+        // debug!("Drawing to Screen")
     }
 
     pub fn set_keys(&mut self) {
-        debug!("Saving Key State")
+        // debug!("Saving Key State")
     }
 
     // pub fn setup_testing_memory(&mut self) {
@@ -130,12 +126,10 @@ impl Chipate {
         // debug!("location: 0x{:X} data: 0x{:X}", self.pc, op_b);
 
         self.opcode = self.opcode | op_b;
-        debug!("Opcode: 0x{:X}", self.opcode);
     }
 
     pub fn decode_opcode(&mut self) {
         let op = self.opcode & 0xF000;
-        debug!("Decode: 0x{:X}", op);
 
         match op {
             0x2000 => self._2nnn_opcode(),
@@ -162,33 +156,126 @@ impl Chipate {
         self.stack[self.sp as usize];
         self.sp += 1;
         self.pc = self.opcode & 0x0FFF;
-        self.increase_pc();
+        debug!("Calls subroutine at: 0x{:X}", (self.opcode & 0x0FFF));
+        // TODO: Jumping doesn't need to increase the PC again right?
+        // self.increase_pc();
     }
 
     /// 6XNN 	Const 	Vx = NN 	Sets VX to NN.
     pub fn _6xnn_opcode(&mut self) {
         info!("6XNN: 0x{:X}", self.opcode);
         let mut reg = self.opcode & 0x0F00;
-        reg = reg >> 12;
-        let data = self.opcode & 0x00FF;
-        self.v[reg as usize] = data as u8;
+        reg = reg >> 8;
+
+        let nn = self.opcode & 0x00FF;
+
+        self.v[reg as usize] = nn as u8;
         self.increase_pc();
+        debug!("Set V{:X} (V{}) 0x{:X}", reg, reg, nn);
     }
 
     /// 7XNN 	Const 	Vx += NN 	Adds NN to VX.
     pub fn _7xnn_opcode(&mut self) {
         info!("7XNN: 0x{:X}", self.opcode);
         let mut reg = self.opcode & 0x0F00;
-        reg = reg >> 12;
-        self.v[reg as usize] = (self.opcode & 0x00FF) as u8 + self.v[reg as usize] as u8;
+        reg = reg >> 8;
+
+        let nn = (self.opcode & 0x00FF) as u8;
+
+        self.v[reg as usize] += nn;
+        self.increase_pc();
+        debug!("Add {:X} to V{:X} (V{}) = {:X}", nn, reg, reg, self.v[reg as usize]);
+    }
+
+    /// 8XY0	Assign	Vx=Vy	Sets VX to the value of VY.
+    pub fn _8xy0_opcode(&mut self) {
+        info!("8XY0: 0x{:X}", self.opcode);
+        self.increase_pc();
+        debug!("Assign	Vx=Vy	Sets VX to the value of VY");
+    }
+
+    /// 8XY1	BitOp	Vx=Vx|Vy	Sets VX to VX or VY. (Bitwise OR operation)
+    pub fn _8xy1_opcode(&mut self) {
+        info!("8XY1: 0x{:X}", self.opcode);
+        self.increase_pc();
+        debug!("BitOp	Vx=Vx|Vy	Sets VX to VX or VY. (Bitwise OR operation)");
+    }
+
+    /// 8XY2	BitOp	Vx=Vx&Vy	Sets VX to VX and VY. (Bitwise AND operation)
+    pub fn _8xy2_opcode(&mut self) {
+        info!("8XY2: 0x{:X}", self.opcode);
         self.increase_pc();
     }
+
+    /// 8XY3	BitOp	Vx=Vx^Vy	Sets VX to VX xor VY.
+    pub fn _8xy3_opcode(&mut self) {
+        info!("8XY3: 0x{:X}", self.opcode);
+        self.increase_pc();
+    }
+
+    /// 8XY4	Math	Vx += Vy	Adds VY to VX. VF is set to 1 when there's a carry, and to 0 when there isn't.
+    pub fn _8xy4_opcode(&mut self) {
+        info!("8XY4: 0x{:X}", self.opcode);
+        self.increase_pc();
+    }
+
+    /// 8XY5	Math	Vx -= Vy	VY is subtracted from VX. VF is set to 0 when there's
+    /// a borrow, and 1 when there isn't.
+    pub fn _8xy5_opcode(&mut self) {
+        info!("8XY5: 0x{:X}", self.opcode);
+        self.increase_pc();
+    }
+
+    /// 8XY6	BitOp	Vx >> 1	Shifts VX right by one. VF is set to the value of the
+    /// least significant bit of VX before the shift.[2]
+    pub fn _8xy6_opcode(&mut self) {
+        info!("8XY6: 0x{:X}", self.opcode);
+        self.increase_pc();
+    }
+
+    /// 8XY7	Math	Vx=Vy-Vx	Sets VX to VY minus VX. VF is set to 0 when there's a borrow,
+    ///and 1 when there isn't.
+    pub fn _8xy7_opcode(&mut self) {
+        info!("8XY7: 0x{:x}", self.opcode);
+        self.increase_pc();
+    }
+
+    /// 8XYE	BitOp	Vx << 1	Shifts VX left by one. VF is set to the value of the most significant
+    /// bit of VX before the shift.[2]
+    pub fn _8xye_opcode(&mut self) {
+        info!("8XYE: 0x{:x}", self.opcode);
+        self.increase_pc();
+    }
+
+    pub fn _8_opcodes(&mut self) {
+        let sub_op = self.opcode & 0x000F;
+        debug!("Decode: 0x{:X}", sub_op);
+
+        match sub_op{
+            0x0000 => self._8xy0_opcode(),
+            0x0001 => self._8xy1_opcode(),
+            0x0002 => self._8xy2_opcode(),
+            0x0003 => self._8xy3_opcode(),
+            0x0004 => self._8xy4_opcode(),
+            0x0005 => self._8xy5_opcode(),
+            0x0006 => self._8xy6_opcode(),
+            0x0007 => self._8xy7_opcode(),
+            0x000e => self._8xye_opcode(),
+            _ => {
+                // Using the catch all as a NOOP
+                info!("Catch all 0x8xxx: 0x{:X}", self.opcode);
+                self.increase_pc();
+            }
+        }
+    }
+
 
     /// ANNN 	MEM 	I = NNN 	Sets I to the address NNN.
     pub fn _annn_opcode(&mut self) {
         info!("ANNN: 0x{:X}", self.opcode);
         self.i = self.opcode & 0x0FFF;
         self.increase_pc();
+        debug!("Set I: {:X}", self.i);
     }
 
     /// FX07 	Timer 	Vx = get_delay() 	Sets VX to the value of the delay timer.
@@ -202,9 +289,11 @@ impl Chipate {
         self.increase_pc();
     }
 
-    /// FX0A 	KeyOp 	Vx = get_key() 	A key press is awaited, and then stored in VX. (Blocking Operation. All instruction halted until next key event)
+    /// FX0A 	KeyOp 	Vx = get_key() 	A key press is awaited, and then stored in VX.
+    /// (Blocking Operation. All instruction halted until next key event)
     pub fn _fx0a_opcode(&mut self) {
         info!("FX0A: 0x{:X}", self.opcode);
+        info!("Implement Blocking Operation");
         self.increase_pc();
     }
 
@@ -213,7 +302,7 @@ impl Chipate {
         info!("FX15: 0x{:X}", self.opcode);
 
         let mut reg = self.opcode & 0x0F00;
-        reg = reg >> 12;
+        reg = reg >> 8;
         self.delay_timer = self.v[reg as usize];
 
         self.increase_pc();
@@ -224,7 +313,7 @@ impl Chipate {
         info!("FX18: 0x{:X}", self.opcode);
 
         let mut reg = self.opcode & 0x0F00;
-        reg = reg >> 12;
+        reg = reg >> 8;
         self.sound_timer = self.v[reg as usize];
 
         self.increase_pc();
@@ -235,7 +324,7 @@ impl Chipate {
         info!("FX1E: 0x{:X}", self.opcode);
 
         let mut reg = self.opcode & 0x0F00;
-        reg = reg >> 12;
+        reg = reg >> 8;
         self.i +=  self.v[reg as usize] as u16;
 
         self.increase_pc();
@@ -244,7 +333,7 @@ impl Chipate {
     /// FX29 	MEM 	I=sprite_addr[Vx] 	Sets I to the location of the sprite for the character in VX. Characters 0-F (in hexadecimal) are represented by a 4x5 font.
     pub fn _fx29_opcode(&mut self) {
         info!("FX29: 0x{:X}", self.opcode);
-        debug!("TODO: Display Function");
+        info!("TODO: Display Function");
         self.increase_pc();
     }
 
@@ -253,14 +342,27 @@ impl Chipate {
     /// significant digit at I plus 2. (In other words, take the decimal representation of VX, place
     /// the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones
     /// digit at location I+2.)
+    /// I sat and tried doing this a couple of ways but TJA's seemed cleaner
+    /// RAM[I] = (V[((opcode&0x0F00)>>8)]/100);
+    /// RAM[I+1] = ((V[((opcode&0x0F00)>>8)]/10)%10);
+    /// RAM[I+2] = ((V[((opcode&0x0F00)>>8)]%100)%10);
+    /// PC+=2;
     pub fn _fx33_opcode(&mut self) {
-        info!("FX33: 0x{:X}", self.opcode);
+        info !("FX33: 0x{:X}", self.opcode);
 
         let mut reg = self.opcode & 0x0F00;
-        reg = reg >> 12;
-        let v = self.v[reg as usize];
 
-        debug!("FX33: {}", v);
+        reg = reg >> 8;
+        let v = self.v[reg as usize] as u16;
+
+        info!("FX33 reg: {:X} {}", reg, reg);
+        info!("FX33 v: {}", v);
+
+        let b = bcd(&v);
+        info!("I0: {}", b[0]);
+        info!("I1: {}", b[1]);
+        info!("I2: {}", b[2]);
+
         self.increase_pc();
     }
 
@@ -270,7 +372,8 @@ impl Chipate {
         self.increase_pc();
     }
 
-    /// FX65 	MEM 	reg_load(Vx,&I) 	Fills V0 to VX (including VX) with values from memory starting at address I.[4]
+    /// FX65 	MEM 	reg_load(Vx,&I) 	Fills V0 to VX (including VX) with values from memory
+    /// starting at address I.[4]
     pub fn _fx65_opcode(&mut self) {
         info!("FX65: 0x{:X}", self.opcode);
         self.increase_pc();
@@ -278,7 +381,6 @@ impl Chipate {
 
     pub fn _f_opcodes(&mut self) {
         let sub_op = self.opcode & 0x00FF;
-        debug!("Decode: 0x{:X}", sub_op);
 
         match sub_op{
             0x0007 => self._fx07_opcode(),
@@ -297,6 +399,7 @@ impl Chipate {
             }
         }
     }
+
 
     pub fn new() -> Chipate {
         debug!("Creating New Chip");
@@ -318,4 +421,18 @@ impl Chipate {
 
         return chip;
     }
+}
+
+pub fn bcd(n: &u16) -> Vec<u16> {
+    let s = &format!("{}", n);
+    let mut v: Vec<u16> = vec![0u16,0u16,0u16];
+    info!("{}",s);
+
+    for b in s.as_bytes().iter() {
+        v.push(*b as u16);
+    }
+    v.reverse();
+    info!("v {:?}",v);
+    let dif = v.len() - 3;
+    v
 }
