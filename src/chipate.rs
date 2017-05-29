@@ -1,3 +1,4 @@
+use std::process;
 use std::{thread, time};
 use std::env;
 use std::io::prelude::*;
@@ -27,7 +28,9 @@ pub struct Chipate {
     // Program Counter
     pc: u16,
 
+    // Display
     gfx: [u8; 64 * 32],
+    draw_flag: bool,
 
     // Timers
     delay_timer: u8,
@@ -90,12 +93,35 @@ impl Chipate {
         self.fetch_opcode();
         self.decode_opcode();
 
-        let one_second = time::Duration::from_millis(15);
+        // println!("█");
+        let one_second = time::Duration::from_millis(1000);
         thread::sleep(one_second);
+        if self.draw_flag {
+            if process::Command::new("clear").status().unwrap().success() {
+                println!("screen successfully cleared");
+            }
+            self.draw_screen();
+        }
     }
 
     pub fn draw_screen(&mut self) {
-        // debug!("Drawing to Screen")
+        let mut buf = String::new();
+        let mut i = 1;
+
+        for p in self.gfx.iter() {
+            if *p < 1 {
+                buf.push_str(" ");
+            } else {
+                buf.push_str("█");
+            }
+
+            if i % 32 == 0 {
+                buf.push_str("\n");
+            }
+
+            i += 1;
+        }
+        println!("{}", buf);
     }
 
     pub fn set_keys(&mut self) {
@@ -222,7 +248,9 @@ impl Chipate {
         let nn = (self.opcode & 0x00FF) as u8;
         info!("0x{:X}", self.opcode);
 
-        self.v[reg as usize] += nn;
+        let buf: u32 = self.v[reg as usize] as u32 + nn as u32;
+
+        self.v[reg as usize] = buf as u8;
         self.increase_pc();
         debug!("Add {:X} to V{:X} (V{}) = {:X}", nn, reg, reg, self.v[reg as usize]);
     }
@@ -282,8 +310,6 @@ impl Chipate {
     pub fn _8xy4_opcode(&mut self) {
         info!("8XY4: 0x{:X}", self.opcode);
 
-        let mut buf: u32;
-
         // TODO: Working
         let x = (self.opcode & 0x0F00) >> 8;
         let y = (self.opcode & 0x00F0) >> 4;
@@ -295,7 +321,7 @@ impl Chipate {
         }
 
         // Easy way to add our buffers without overflow
-        buf = self.v[x as usize] as u32 + self.v[y as usize] as u32;
+        let buf: u32 = self.v[x as usize] as u32 + self.v[y as usize] as u32;
         self.v[x as usize] = buf as u8;
 
         self.increase_pc();
@@ -522,6 +548,7 @@ impl Chipate {
             i: 0,
             pc: 0,
             gfx: [0; 64 * 32],
+            draw_flag: false,
             delay_timer: 0,
             sound_timer: 0,
             stack: Vec::new(),
