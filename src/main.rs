@@ -9,7 +9,8 @@ fn main() {
 
     let mut chip = chipate::Chipate::new();
     chip.init();
-    chip.load_program("PONG");
+    // chip.load_program("PONG");
+    chip.load_program("MAZE");
 
     // chip.setup_testing_memory();
     // chip.emulate_cycle();

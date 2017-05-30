@@ -29,7 +29,7 @@ pub struct Chipate {
     pc: u16,
 
     // Display
-    gfx: [u8; 64 * 32],
+    gfx: Vec<u8>,
     draw_flag: bool,
 
     // Timers
@@ -94,34 +94,37 @@ impl Chipate {
         self.decode_opcode();
 
         // println!("█");
-        let one_second = time::Duration::from_millis(1000);
+        let one_second = time::Duration::from_millis(16);
         thread::sleep(one_second);
-        if self.draw_flag {
+        if self.draw_flag == true {
             if process::Command::new("clear").status().unwrap().success() {
-                println!("screen successfully cleared");
+                debug!("screen successfully cleared");
             }
             self.draw_screen();
         }
     }
 
     pub fn draw_screen(&mut self) {
-        let mut buf = String::new();
-        let mut i = 1;
+        let mut row_string = String::new();
+        let mut len;
 
-        for p in self.gfx.iter() {
-            if *p < 1 {
-                buf.push_str(" ");
+        // println!("          1111111111222222222233333333334444444444555555555566666");
+        // println!("01234567890123456789012345678901234567890123456789012345678901234");
+
+        for pixel in &self.gfx {
+            if *pixel == 0 {
+                row_string.push_str(" ");
             } else {
-                buf.push_str("█");
+                row_string.push_str("█");
             }
 
-            if i % 32 == 0 {
-                buf.push_str("\n");
-            }
+            len = row_string.len();
 
-            i += 1;
+            if len == 66 {
+                println!("{}", row_string);
+                row_string = String::from("");
+            }
         }
-        println!("{}", buf);
     }
 
     pub fn set_keys(&mut self) {
@@ -163,6 +166,7 @@ impl Chipate {
             0x6000 => self._6xnn_opcode(),
             0x7000 => self._7xnn_opcode(),
             0xA000 => self._annn_opcode(),
+            0xD000 => self._dxyn_opcode(),
             0xE000 => self._e_opcodes(),
             0xF000 => self._f_opcodes(),
             _ => {
@@ -194,7 +198,9 @@ impl Chipate {
 
     /// 00E0 	Display 	disp_clear() 	Clears the screen.
     pub fn _00e0_opcode(&mut self) {
-        info!("TODO: Clear Display");
+        if process::Command::new("clear").status().unwrap().success() {
+            debug!("screen successfully cleared");
+        }
         self.increase_pc();
     }
 
@@ -402,6 +408,33 @@ impl Chipate {
         }
     }
 
+    pub fn _dxyn_opcode(&mut self) {
+        let x = self.v[((self.opcode & 0x0F00) >> 8) as usize];
+        let y = self.v[((self.opcode & 0x00F0) >> 4) as usize];
+        let height = self.opcode & 0x000F;
+        let mut pixel: u8;
+
+
+        self.v[0xF as usize] = 0;
+        for yline in 0..height {
+            pixel = self.memory[(self.i + yline) as usize];
+            for xline in 0..7 {
+                debug!("{}, {}, {:b}", x, y, pixel);
+                if (pixel & (0x80 >> xline)) != 0 {
+                    let xpos: u64 = (x + xline) as u64;
+                    let ypos: u64 = y as u64 + (yline as u64 * 64);
+                    if self.gfx[(xpos + ypos) as usize] != 0 {
+                        self.v[0xF as usize] = 1;
+                    }
+                    self.gfx[(xpos + ypos) as usize] ^= 1
+                }
+            }
+
+        }
+        self.draw_flag = true;
+        self.increase_pc();
+    }
+
     /// EX9E 	KeyOp 	if(key()==Vx) 	Skips the next instruction if the key stored in VX is pressed.
     /// (Usually the next instruction is a jump to skip a code block)
     pub fn _ex9e_opcode(&mut self) {
@@ -547,7 +580,7 @@ impl Chipate {
             v: [0; 16],
             i: 0,
             pc: 0,
-            gfx: [0; 64 * 32],
+            gfx: vec![0; 64*32],
             draw_flag: false,
             delay_timer: 0,
             sound_timer: 0,
