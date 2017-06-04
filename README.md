@@ -53,3 +53,5 @@ FX65 | MEM | reg_load(Vx,&I) | Fills V0 to VX (including VX) with values from me
 Opcode Reference from : [Wikipedia](https://en.wikipedia.org/wiki/CHIP-8#Opcode_table)
 
 Primary Reference: [Laurence Muller's Blog Post](http://www.multigesture.net/articles/how-to-write-an-emulator-chip-8-interpreter/)
+
+Display Code From: [Michalis Zabaras Chip-8 Implementation](https://github.com/mikezaby/chip-8.rs)
