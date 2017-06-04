@@ -101,15 +101,9 @@ impl<'c> Chipate<'c> {
         self.fetch_opcode();
         self.decode_opcode();
 
-        // println!("█");
-        let one_second = time::Duration::from_millis(self.clock_speed);
-        thread::sleep(one_second);
-        // if self.draw_flag == true {
-        //     if process::Command::new("clear").status().unwrap().success() {
-        //         debug!("screen successfully cleared");
-        //     }
-        //     self.draw_screen();
-        // }
+        let sleep = time::Duration::from_millis(self.clock_speed);
+        thread::sleep(sleep);
+
         if self.delay_timer > 0 { self.delay_timer -= 1; }
 
         if self.sound_timer > 0 {
@@ -429,8 +423,6 @@ impl<'c> Chipate<'c> {
 
         let from = self.i as usize;
         let to = from + (self.opcode & 0x000F) as usize;
-
-        println!("from: {}, to: {}", from, to);
 
         self.v[0xF] = self.display.draw(x as usize, y as usize, &self.memory[from..to]);
 

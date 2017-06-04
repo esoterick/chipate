@@ -26,10 +26,10 @@ fn main() {
             .get_matches();
 
     let program = matches.value_of("program").unwrap();
-    println!("Value for program: {}", program);
+    debug!("Value for program: {}", program);
 
     let clock = matches.value_of("clock").unwrap();
-    println!("Value for clock: {}", clock);
+    debug!("Value for clock: {}", clock);
 
     let mut chip = Chipate::new();
     chip.init();
