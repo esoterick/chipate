@@ -324,18 +324,17 @@ impl<'c> Chipate<'c> {
     pub fn _8xy4_opcode(&mut self) {
         info!("8XY4: 0x{:X}", self.opcode);
 
-        // TODO: Working
-        let x = (self.opcode & 0x0F00) >> 8;
-        let y = (self.opcode & 0x00F0) >> 4;
+        let x = ((self.opcode & 0x0F00) >> 8) as usize;
+        let y = ((self.opcode & 0x00F0) >> 4) as usize;
 
-        if self.v[x as usize] > 0xFF - self.v[y as usize] {
+        if self.v[x] > 0xFF - self.v[y] {
             self.v[0xF as usize] = 1;
         } else {
             self.v[0xF as usize] = 0;
         }
 
         // Easy way to add our buffers without overflow
-        let buf: u32 = self.v[x as usize] as u32 + self.v[y as usize] as u32;
+        let buf: u32 = self.v[x] as u32 + self.v[y] as u32;
         self.v[x as usize] = buf as u8;
 
         self.increase_pc();
@@ -345,6 +344,17 @@ impl<'c> Chipate<'c> {
     /// a borrow, and 1 when there isn't.
     pub fn _8xy5_opcode(&mut self) {
         info!("8XY5: 0x{:X}", self.opcode);
+
+        let x = ((self.opcode & 0x0F00) >> 8) as usize;
+        let y = ((self.opcode & 0x00F0) >> 4) as usize;
+
+        if self.v[y] > self.v[x] {
+            self.v[0xF as usize] = 0;
+        } else {
+            self.v[0xF as usize] = 1;
+        }
+
+        self.v[x] -= self.v[y];
         self.increase_pc();
     }
 
@@ -352,6 +362,11 @@ impl<'c> Chipate<'c> {
     /// least significant bit of VX before the shift.[2]
     pub fn _8xy6_opcode(&mut self) {
         info!("8XY6: 0x{:X}", self.opcode);
+        let x = ((self.opcode & 0x0F00) >> 8) as usize;
+
+        self.v[0xF as usize] = self.v[x] & 0x1;
+        self.v[x] = self.v[x] >> 1;
+
         self.increase_pc();
     }
 
@@ -359,6 +374,16 @@ impl<'c> Chipate<'c> {
     ///and 1 when there isn't.
     pub fn _8xy7_opcode(&mut self) {
         info!("8XY7: 0x{:x}", self.opcode);
+        let x = ((self.opcode & 0x0F00) >> 8) as usize;
+        let y = ((self.opcode & 0x00F0) >> 4) as usize;
+
+        if self.v[x] > self.v[y] {
+            self.v[0xF as usize] = 0;
+        } else {
+            self.v[0xF as usize] = 1;
+        }
+
+        self.v[x] = self.v[y] - self.v[x];
         self.increase_pc();
     }
 
@@ -366,6 +391,12 @@ impl<'c> Chipate<'c> {
     /// bit of VX before the shift.[2]
     pub fn _8xye_opcode(&mut self) {
         info!("8XYE: 0x{:x}", self.opcode);
+
+        let x = ((self.opcode & 0x0F00) >> 8) as usize;
+
+        self.v[0xF as usize] = self.v[x] >> 7;
+        self.v[x] = self.v[x] << 1;
+
         self.increase_pc();
     }
 
