@@ -1,14 +1,15 @@
-use std::process;
 use std::{thread, time};
 use std::env;
 use std::io::prelude::*;
 use std::fs::File;
 
+use display::Display;
+
 /// Chipate Module
 /// Rust emulation of the Chip-8
 /// http://www.multigesturearticles/how-to-write-an-emulator-chip-8-interpreter/
 #[allow(dead_code)]
-pub struct Chipate {
+pub struct Chipate<'c> {
     // Opcodes
     opcode: u16,
 
@@ -29,8 +30,7 @@ pub struct Chipate {
     pc: u16,
 
     // Display
-    gfx: Vec<u8>,
-    draw_flag: bool,
+    pub display: Display,
 
     // Timers
     delay_timer: u8,
@@ -43,10 +43,14 @@ pub struct Chipate {
     // Keypad
     key: [u8; 16],
 
-    program: &'static str,
+    // Program to load
+    program: &'c str,
+
+    // Clock Speed of the chip in ms
+    clock_speed: u64,
 }
 
-impl Chipate {
+impl<'c> Chipate<'c> {
     pub fn init(&mut self) {
         debug!("Initialize Chip");
         // pc     = 0x200;  // Program counter starts at 0x200
@@ -89,61 +93,34 @@ impl Chipate {
 
     }
 
+    pub fn set_clock_speed(&mut self, s: u64) {
+        self.clock_speed = s;
+    }
+
     pub fn emulate_cycle(&mut self) {
         self.fetch_opcode();
         self.decode_opcode();
 
         // println!("█");
-        let one_second = time::Duration::from_millis(16);
+        let one_second = time::Duration::from_millis(self.clock_speed);
         thread::sleep(one_second);
-        if self.draw_flag == true {
-            if process::Command::new("clear").status().unwrap().success() {
-                debug!("screen successfully cleared");
-            }
-            self.draw_screen();
-        }
-    }
+        // if self.draw_flag == true {
+        //     if process::Command::new("clear").status().unwrap().success() {
+        //         debug!("screen successfully cleared");
+        //     }
+        //     self.draw_screen();
+        // }
+        if self.delay_timer > 0 { self.delay_timer -= 1; }
 
-    pub fn draw_screen(&mut self) {
-        let mut row_string = String::new();
-        let mut len;
-
-        // println!("          1111111111222222222233333333334444444444555555555566666");
-        // println!("01234567890123456789012345678901234567890123456789012345678901234");
-
-        for pixel in &self.gfx {
-            if *pixel == 0 {
-                row_string.push_str(" ");
-            } else {
-                row_string.push_str("█");
-            }
-
-            len = row_string.len();
-
-            if len == 66 {
-                println!("{}", row_string);
-                row_string = String::from("");
-            }
+        if self.sound_timer > 0 {
+            if self.sound_timer == 1 { println!("BEEP!\n"); }
+            self.sound_timer -= 1;
         }
     }
 
     pub fn set_keys(&mut self) {
         // debug!("Saving Key State")
     }
-
-    // pub fn setup_testing_memory(&mut self) {
-    //     debug!("Setting test memory");
-
-    //     self.memory[self.pc as usize] = 0xA2;
-    //     self.memory[(self.pc + 1) as usize] = 0xF0;
-
-    //     debug!("Location: 0x{:X} data: 0x{:X}",
-    //            self.pc,
-    //            self.memory[self.pc as usize]);
-    //     debug!("Location: 0x{:X} data: 0x{:X}",
-    //            self.pc + 1,
-    //            self.memory[(self.pc + 1) as usize]);
-    // }
 
     pub fn fetch_opcode(&mut self) {
         let op_a = self.memory[self.pc as usize];
@@ -162,7 +139,11 @@ impl Chipate {
 
         match op {
             0x0000 => self._0_opcodes(),
+            0x1000 => self._1nnn_opcode(),
             0x2000 => self._2nnn_opcode(),
+            0x3000 => self._3xnn_opcode(),
+            0x4000 => self._4xnn_opcode(),
+            0x5000 => self._5xy0_opcode(),
             0x6000 => self._6xnn_opcode(),
             0x7000 => self._7xnn_opcode(),
             0xA000 => self._annn_opcode(),
@@ -198,9 +179,7 @@ impl Chipate {
 
     /// 00E0 	Display 	disp_clear() 	Clears the screen.
     pub fn _00e0_opcode(&mut self) {
-        if process::Command::new("clear").status().unwrap().success() {
-            debug!("screen successfully cleared");
-        }
+        self.display.clear();
         self.increase_pc();
     }
 
@@ -224,11 +203,46 @@ impl Chipate {
     /// 2NNN 	Flow 	*(0xNNN)() 	Calls subroutine at NNN.
     pub fn _2nnn_opcode(&mut self) {
         info!("2NNN: 0x{:X}", self.opcode);
-        self.stack.push(self.pc);
-        debug!("Pushing Callback to Stack: 0x{:X}", self.pc);
-        // self.sp += 1;
-        self.pc = self.opcode & 0x0FFF;
         debug!("Calls subroutine at: 0x{:X}", (self.opcode & 0x0FFF));
+        self.stack.push(self.pc);
+        self.pc = self.opcode & 0x0FFF;
+    }
+
+    /// 3XNN	Cond	if(Vx==NN)	Skips the next instruction if VX equals NN.
+    /// (Usually the next instruction is a jump to skip a code block)
+    pub fn _3xnn_opcode(&mut self) {
+        info!("3XNN: 0x{:X}", self.opcode);
+        let x = ((self.opcode & 0x0F00) >> 8) as usize;
+        let nn = (self.opcode & 0x00FF) as u8;
+        if self.v[x] == nn  {
+            self.increase_pc();
+        }
+        self.increase_pc();
+    }
+
+    /// 4XNN	Cond	if(Vx!=NN)	Skips the next instruction if VX doesn't equal NN.
+    /// (Usually the next instruction is a jump to skip a code block)
+    pub fn _4xnn_opcode(&mut self) {
+        info!("4XNN: 0x{:X}", self.opcode);
+        let x = ((self.opcode & 0x0F00) >> 8) as usize;
+        let nn = (self.opcode & 0x00FF) as u8;
+        if self.v[x] != nn  {
+            self.increase_pc();
+        }
+        self.increase_pc();
+    }
+
+    /// 5XY0	Cond	if(Vx==Vy)	Skips the next instruction if VX equals VY.
+    /// (Usually the next instruction is a jump to skip a code block)
+    pub fn _5xy0_opcode(&mut self) {
+        info!("5XY0: 0x{:X}", self.opcode);
+        let x = ((self.opcode & 0x0F00) >> 8) as usize;
+        let y = ((self.opcode & 0x00F0) >> 4) as usize;
+
+        if self.v[x] == self.v[y] {
+            self.increase_pc();
+        }
+        self.increase_pc();
     }
 
     /// 6XNN 	Const 	Vx = NN 	Sets VX to NN.
@@ -409,29 +423,17 @@ impl Chipate {
     }
 
     pub fn _dxyn_opcode(&mut self) {
+        info!("DXYN: 0x{:X}", self.opcode);
         let x = self.v[((self.opcode & 0x0F00) >> 8) as usize];
         let y = self.v[((self.opcode & 0x00F0) >> 4) as usize];
-        let height = self.opcode & 0x000F;
-        let mut pixel: u8;
 
+        let from = self.i as usize;
+        let to = from + (self.opcode & 0x000F) as usize;
 
-        self.v[0xF as usize] = 0;
-        for yline in 0..height {
-            pixel = self.memory[(self.i + yline) as usize];
-            for xline in 0..7 {
-                debug!("{}, {}, {:b}", x, y, pixel);
-                if (pixel & (0x80 >> xline)) != 0 {
-                    let xpos: u64 = (x + xline) as u64;
-                    let ypos: u64 = y as u64 + (yline as u64 * 64);
-                    if self.gfx[(xpos + ypos) as usize] != 0 {
-                        self.v[0xF as usize] = 1;
-                    }
-                    self.gfx[(xpos + ypos) as usize] ^= 1
-                }
-            }
+        println!("from: {}, to: {}", from, to);
 
-        }
-        self.draw_flag = true;
+        self.v[0xF] = self.display.draw(x as usize, y as usize, &self.memory[from..to]);
+
         self.increase_pc();
     }
 
@@ -570,40 +572,35 @@ impl Chipate {
         }
     }
 
-
-    pub fn new() -> Chipate {
+    pub fn new() -> Chipate<'c> {
         debug!("Creating New Chip");
 
-        let chip = Chipate {
+        let mut chip = Chipate {
             opcode: 0,
             memory: [0; 4096],
             v: [0; 16],
             i: 0,
             pc: 0,
-            gfx: vec![0; 64*32],
-            draw_flag: false,
+            display: Display::new(),
             delay_timer: 0,
             sound_timer: 0,
             stack: Vec::new(),
             // sp: 0,
             key: [0; 16],
             program: "",
+            clock_speed: 10,
         };
 
-        return chip;
+        for i in 0..80 { chip.memory[i] = FONTSET[i]; }
+        chip
     }
 }
 
-// pub fn bcd(n: &u16) -> Vec<u16> {
-//     let s = &format!("{}", n);
-//     let mut v: Vec<u16> = vec![0u16,0u16,0u16];
-//     info!("{}",s);
-
-//     for b in s.as_bytes().iter() {
-//         v.push(*b as u16);
-//     }
-//     v.reverse();
-//     info!("v {:?}",v);
-//     let dif = v.len() - 3;
-//     v
-// }
+static FONTSET: [u8; 80] = [0xF0, 0x90, 0x90, 0x90, 0xF0, 0x20, 0x60, 0x20, 0x20, 0x70,
+                            0xF0, 0x10, 0xF0, 0x80, 0xF0, 0xF0, 0x10, 0xF0, 0x10, 0xF0,
+                            0x90, 0x90, 0xF0, 0x10, 0x10, 0xF0, 0x80, 0xF0, 0x10, 0xF0,
+                            0xF0, 0x80, 0xF0, 0x90, 0xF0, 0xF0, 0x10, 0x20, 0x40, 0x40,
+                            0xF0, 0x90, 0xF0, 0x90, 0xF0, 0xF0, 0x90, 0xF0, 0x10, 0xF0,
+                            0xF0, 0x90, 0xF0, 0x90, 0x90, 0xE0, 0x90, 0xE0, 0x90, 0xE0,
+                            0xF0, 0x80, 0x80, 0x80, 0xF0, 0xE0, 0x90, 0x90, 0x90, 0xE0,
+                            0xF0, 0x80, 0xF0, 0x80, 0xF0, 0xF0, 0x80, 0xF0, 0x80, 0x80];

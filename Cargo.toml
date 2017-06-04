@@ -6,3 +6,7 @@ authors = ["Robert J. Lambert III <rlambert85@gmail.com>"]
 [dependencies]
 log = "0.3.8"
 env_logger = "0.4.3"
+clap = "~2.19.0"
+
+[dependencies.sdl]
+git = "https://github.com/brson/rust-sdl.git"
